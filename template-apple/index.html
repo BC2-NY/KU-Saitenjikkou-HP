@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学部委員会テンプレート（Apple風）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block">
+<style>
+/* 配色は色相 --h・彩度係数 --k・主色の彩度 --ps と明度 --pl で決まる。下のトークンはすべてそこから算出 */
+:root{
+  /* 余白は8の倍数 */
+  --sp-1:8px; --sp-2:16px; --sp-3:24px; --sp-4:32px; --sp-6:48px; --sp-8:64px; --sp-12:96px; --sp-16:128px;
+  /* レイヤードシャドウ：近い影（輪郭）＋中間＋遠い影（拡散）。色は学部の色相を薄く混ぜる */
+  --e1:0 0 0 1px hsl(var(--h) 30% 18% / .04), 0 1px 2px hsl(var(--h) 30% 18% / .06), 0 2px 8px hsl(var(--h) 30% 18% / .04);
+  --e2:0 0 0 1px hsl(var(--h) 30% 18% / .04), 0 1px 2px hsl(var(--h) 30% 18% / .06), 0 8px 16px -4px hsl(var(--h) 30% 18% / .08), 0 24px 48px -8px hsl(var(--h) 30% 18% / .12);
+  --e3:0 0 0 1px hsl(var(--h) 30% 18% / .05), 0 2px 4px hsl(var(--h) 30% 18% / .06), 0 12px 24px -4px hsl(var(--h) 30% 18% / .10), 0 32px 64px -12px hsl(var(--h) 30% 18% / .16);
+  --h:265; --k:1; --ps:48%; --pl:42%;
+  --p:hsl(var(--h) var(--ps) var(--pl)); --pd:hsl(var(--h) calc(45% * var(--k)) 28%);
+  --pc:hsl(var(--h) calc(90% * var(--k)) 93%); --opc:hsl(var(--h) calc(80% * var(--k)) 16%); --pt:hsl(var(--h) calc(85% * var(--k)) 86%);
+  --s:hsl(var(--h) calc(100% * var(--k)) 98.5%); --sl:hsl(var(--h) calc(40% * var(--k)) 96.5%); --sc:hsl(var(--h) calc(35% * var(--k)) 95%); --sh:hsl(var(--h) calc(28% * var(--k)) 92.5%);
+  --sec:hsl(var(--h) calc(55% * var(--k)) 91%); --ov:hsl(var(--h) calc(14% * var(--k)) 79%); --o:hsl(var(--h) calc(5% * var(--k)) 47%);
+  --on:hsl(var(--h) calc(10% * var(--k)) 12%); --onv:hsl(var(--h) calc(7% * var(--k)) 29%);
+  --tc:hsl(calc(var(--h) + 75) calc(90% * var(--k)) 92%); --t:hsl(calc(var(--h) + 75) calc(25% * var(--k)) 38%); --tt:hsl(calc(var(--h) + 75) calc(90% * var(--k)) 85%);
+}
+html,body{margin:0;padding:0;background:var(--s);color:var(--on);font-family:"Google Sans","Noto Sans JP",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+::selection{background:var(--tt);color:var(--on)}
+a{color:var(--p);text-decoration:none}
+a:hover{color:var(--opc);text-decoration:underline}
+button{appearance:none;border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+.ms{font-family:"Material Symbols Rounded";font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;-webkit-font-feature-settings:"liga";font-feature-settings:"liga"}
+/* スクロール演出（CSSのスクロール連動アニメーション。非対応ブラウザでは演出なしで普通に表示） */
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:var(--p);transform-origin:0 50%;transform:scaleX(0);z-index:30;pointer-events:none}
+@supports (animation-timeline: view()){
+  .progress{animation:grow linear both;animation-timeline:scroll(root block)}
+  @keyframes grow{to{transform:scaleX(1)}}
+  /* 画面に入るときに下からふわっと出る */
+  .reveal{animation:reveal linear both;animation-timeline:view();animation-range:entry 0% entry 240px}
+  .reveal-late{animation-range:entry 48px entry 320px}
+  @keyframes reveal{from{opacity:0;transform:translateY(48px) scale(.98)}}
+  /* ヒーローは画面から出ていくときに少し縮んで薄くなる（上端基準なのでページ内リンクの位置はずれない） */
+  .hero-exit{transform-origin:50% 0;animation:heroExit linear both;animation-timeline:view();animation-range:exit 0% exit 100%}
+  @keyframes heroExit{to{opacity:.35;transform:scale(.92)}}
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition-duration:.01ms !important}
+  .progress,.reveal,.hero-exit{animation:none !important;opacity:1 !important;transform:none !important}
+  .progress{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<!-- htm + Preact (standalone build) -->
+<script>!function(e,n){"object"==typeof exports&&"undefined"!=typeof module?n(exports):"function"==typeof define&&define.amd?define(["exports"],n):n(e.htmPreact={})}(this,function(e){var n,_,t,o,r,u,l,i={},c=[],f=/acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;function s(e,n){for(var _ in n)e[_]=n[_];return e}function a(e){var n=e.parentNode;n&&n.removeChild(e)}function p(e,_,t){var o,r,u,l={};for(u in _)"key"==u?o=_[u]:"ref"==u?r=_[u]:l[u]=_[u];if(arguments.length>2&&(l.children=arguments.length>3?n.call(arguments,2):t),"function"==typeof e&&null!=e.defaultProps)for(u in e.defaultProps)void 0===l[u]&&(l[u]=e.defaultProps[u]);return h(e,l,o,r,null)}function h(e,n,o,r,u){var l={type:e,props:n,key:o,ref:r,__k:null,__:null,__b:0,__e:null,__d:void 0,__c:null,__h:null,constructor:void 0,__v:null==u?++t:u};return null!=_.vnode&&_.vnode(l),l}function d(e){return e.children}function v(e,n){this.props=e,this.context=n}function y(e,n){if(null==n)return e.__?y(e.__,e.__.__k.indexOf(e)+1):null;for(var _;n<e.__k.length;n++)if(null!=(_=e.__k[n])&&null!=_.__e)return _.__e;return"function"==typeof e.type?y(e):null}function m(e){var n,_;if(null!=(e=e.__)&&null!=e.__c){for(e.__e=e.__c.base=null,n=0;n<e.__k.length;n++)if(null!=(_=e.__k[n])&&null!=_.__e){e.__e=e.__c.base=_.__e;break}return m(e)}}function g(e){(!e.__d&&(e.__d=!0)&&o.push(e)&&!k.__r++||u!==_.debounceRendering)&&((u=_.debounceRendering)||r)(k)}function k(){for(var e;k.__r=o.length;)e=o.sort(function(e,n){return e.__v.__b-n.__v.__b}),o=[],e.some(function(e){var n,_,t,o,r,u;e.__d&&(r=(o=(n=e).__v).__e,(u=n.__P)&&(_=[],(t=s({},o)).__v=o.__v+1,D(u,o,t,n.__n,void 0!==u.ownerSVGElement,null!=o.__h?[r]:null,_,null==r?y(o):r,o.__h),w(_,o),o.__e!=r&&m(o)))})}function b(e,n,_,t,o,r,u,l,f,s){var a,p,v,m,g,k,b,H=t&&t.__k||c,E=H.length;for(_.__k=[],a=0;a<n.length;a++)if(null!=(m=_.__k[a]=null==(m=n[a])||"boolean"==typeof m?null:"string"==typeof m||"number"==typeof m||"bigint"==typeof m?h(null,m,null,null,m):Array.isArray(m)?h(d,{children:m},null,null,null):m.__b>0?h(m.type,m.props,m.key,null,m.__v):m)){if(m.__=_,m.__b=_.__b+1,null===(v=H[a])||v&&m.key==v.key&&m.type===v.type)H[a]=void 0;else for(p=0;p<E;p++){if((v=H[p])&&m.key==v.key&&m.type===v.type){H[p]=void 0;break}v=null}D(e,m,v=v||i,o,r,u,l,f,s),g=m.__e,(p=m.ref)&&v.ref!=p&&(b||(b=[]),v.ref&&b.push(v.ref,null,m),b.push(p,m.__c||g,m)),null!=g?(null==k&&(k=g),"function"==typeof m.type&&null!=m.__k&&m.__k===v.__k?m.__d=f=C(m,f,e):f=x(e,m,v,H,g,f),s||"option"!==_.type?"function"==typeof _.type&&(_.__d=f):e.value=""):f&&v.__e==f&&f.parentNode!=e&&(f=y(v))}for(_.__e=k,a=E;a--;)null!=H[a]&&("function"==typeof _.type&&null!=H[a].__e&&H[a].__e==_.__d&&(_.__d=y(t,a+1)),A(H[a],H[a]));if(b)for(a=0;a<b.length;a++)U(b[a],b[++a],b[++a])}function C(e,n,_){var t,o;for(t=0;t<e.__k.length;t++)(o=e.__k[t])&&(o.__=e,n="function"==typeof o.type?C(o,n,_):x(_,o,o,e.__k,o.__e,n));return n}function x(e,n,_,t,o,r){var u,l,i;if(void 0!==n.__d)u=n.__d,n.__d=void 0;else if(null==_||o!=r||null==o.parentNode)e:if(null==r||r.parentNode!==e)e.appendChild(o),u=null;else{for(l=r,i=0;(l=l.nextSibling)&&i<t.length;i+=2)if(l==o)break e;e.insertBefore(o,r),u=r}return void 0!==u?u:o.nextSibling}function H(e,n,_){"-"===n[0]?e.setProperty(n,_):e[n]=null==_?"":"number"!=typeof _||f.test(n)?_:_+"px"}function E(e,n,_,t,o){var r;e:if("style"===n)if("string"==typeof _)e.style.cssText=_;else{if("string"==typeof t&&(e.style.cssText=t=""),t)for(n in t)_&&n in _||H(e.style,n,"");if(_)for(n in _)t&&_[n]===t[n]||H(e.style,n,_[n])}else if("o"===n[0]&&"n"===n[1])r=n!==(n=n.replace(/Capture$/,"")),n=n.toLowerCase()in e?n.toLowerCase().slice(2):n.slice(2),e.l||(e.l={}),e.l[n+r]=_,_?t||e.addEventListener(n,r?S:P,r):e.removeEventListener(n,r?S:P,r);else if("dangerouslySetInnerHTML"!==n){if(o)n=n.replace(/xlink[H:h]/,"h").replace(/sName$/,"s");else if("href"!==n&&"list"!==n&&"form"!==n&&"tabIndex"!==n&&"download"!==n&&n in e)try{e[n]=null==_?"":_;break e}catch(e){}"function"==typeof _||(null!=_&&(!1!==_||"a"===n[0]&&"r"===n[1])?e.setAttribute(n,_):e.removeAttribute(n))}}function P(e){this.l[e.type+!1](_.event?_.event(e):e)}function S(e){this.l[e.type+!0](_.event?_.event(e):e)}function D(e,n,t,o,r,u,l,i,c){var f,a,p,h,y,m,g,k,C,x,H,E=n.type;if(void 0!==n.constructor)return null;null!=t.__h&&(c=t.__h,i=n.__e=t.__e,n.__h=null,u=[i]),(f=_.__b)&&f(n);try{e:if("function"==typeof E){if(k=n.props,C=(f=E.contextType)&&o[f.__c],x=f?C?C.props.value:f.__:o,t.__c?g=(a=n.__c=t.__c).__=a.__E:("prototype"in E&&E.prototype.render?n.__c=a=new E(k,x):(n.__c=a=new v(k,x),a.constructor=E,a.render=M),C&&C.sub(a),a.props=k,a.state||(a.state={}),a.context=x,a.__n=o,p=a.__d=!0,a.__h=[]),null==a.__s&&(a.__s=a.state),null!=E.getDerivedStateFromProps&&(a.__s==a.state&&(a.__s=s({},a.__s)),s(a.__s,E.getDerivedStateFromProps(k,a.__s))),h=a.props,y=a.state,p)null==E.getDerivedStateFromProps&&null!=a.componentWillMount&&a.componentWillMount(),null!=a.componentDidMount&&a.__h.push(a.componentDidMount);else{if(null==E.getDerivedStateFromProps&&k!==h&&null!=a.componentWillReceiveProps&&a.componentWillReceiveProps(k,x),!a.__e&&null!=a.shouldComponentUpdate&&!1===a.shouldComponentUpdate(k,a.__s,x)||n.__v===t.__v){a.props=k,a.state=a.__s,n.__v!==t.__v&&(a.__d=!1),a.__v=n,n.__e=t.__e,n.__k=t.__k,n.__k.forEach(function(e){e&&(e.__=n)}),a.__h.length&&l.push(a);break e}null!=a.componentWillUpdate&&a.componentWillUpdate(k,a.__s,x),null!=a.componentDidUpdate&&a.__h.push(function(){a.componentDidUpdate(h,y,m)})}a.context=x,a.props=k,a.state=a.__s,(f=_.__r)&&f(n),a.__d=!1,a.__v=n,a.__P=e,f=a.render(a.props,a.state,a.context),a.state=a.__s,null!=a.getChildContext&&(o=s(s({},o),a.getChildContext())),p||null==a.getSnapshotBeforeUpdate||(m=a.getSnapshotBeforeUpdate(h,y)),H=null!=f&&f.type===d&&null==f.key?f.props.children:f,b(e,Array.isArray(H)?H:[H],n,t,o,r,u,l,i,c),a.base=n.__e,n.__h=null,a.__h.length&&l.push(a),g&&(a.__E=a.__=null),a.__e=!1}else null==u&&n.__v===t.__v?(n.__k=t.__k,n.__e=t.__e):n.__e=T(t.__e,n,t,o,r,u,l,c);(f=_.diffed)&&f(n)}catch(e){n.__v=null,(c||null!=u)&&(n.__e=i,n.__h=!!c,u[u.indexOf(i)]=null),_.__e(e,n,t)}}function w(e,n){_.__c&&_.__c(n,e),e.some(function(n){try{e=n.__h,n.__h=[],e.some(function(e){e.call(n)})}catch(e){_.__e(e,n.__v)}})}function T(e,_,t,o,r,u,l,c){var f,s,p,h=t.props,d=_.props,v=_.type,m=0;if("svg"===v&&(r=!0),null!=u)for(;m<u.length;m++)if((f=u[m])&&(f===e||(v?f.localName==v:3==f.nodeType))){e=f,u[m]=null;break}if(null==e){if(null===v)return document.createTextNode(d);e=r?document.createElementNS("http://www.w3.org/2000/svg",v):document.createElement(v,d.is&&d),u=null,c=!1}if(null===v)h===d||c&&e.data===d||(e.data=d);else{if(u=u&&n.call(e.childNodes),s=(h=t.props||i).dangerouslySetInnerHTML,p=d.dangerouslySetInnerHTML,!c){if(null!=u)for(h={},m=0;m<e.attributes.length;m++)h[e.attributes[m].name]=e.attributes[m].value;(p||s)&&(p&&(s&&p.__html==s.__html||p.__html===e.innerHTML)||(e.innerHTML=p&&p.__html||""))}if(function(e,n,_,t,o){var r;for(r in _)"children"===r||"key"===r||r in n||E(e,r,null,_[r],t);for(r in n)o&&"function"!=typeof n[r]||"children"===r||"key"===r||"value"===r||"checked"===r||_[r]===n[r]||E(e,r,n[r],_[r],t)}(e,d,h,r,c),p)_.__k=[];else if(m=_.props.children,b(e,Array.isArray(m)?m:[m],_,t,o,r&&"foreignObject"!==v,u,l,u?u[0]:t.__k&&y(t,0),c),null!=u)for(m=u.length;m--;)null!=u[m]&&a(u[m]);c||("value"in d&&void 0!==(m=d.value)&&(m!==e.value||"progress"===v&&!m)&&E(e,"value",m,h.value,!1),"checked"in d&&void 0!==(m=d.checked)&&m!==e.checked&&E(e,"checked",m,h.checked,!1))}return e}function U(e,n,t){try{"function"==typeof e?e(n):e.current=n}catch(e){_.__e(e,t)}}function A(e,n,t){var o,r;if(_.unmount&&_.unmount(e),(o=e.ref)&&(o.current&&o.current!==e.__e||U(o,null,n)),null!=(o=e.__c)){if(o.componentWillUnmount)try{o.componentWillUnmount()}catch(e){_.__e(e,n)}o.base=o.__P=null}if(o=e.__k)for(r=0;r<o.length;r++)o[r]&&A(o[r],n,"function"!=typeof e.type);t||null==e.__e||a(e.__e),e.__e=e.__d=void 0}function M(e,n,_){return this.constructor(e,_)}n=c.slice,_={__e:function(e,n){for(var _,t,o;n=n.__;)if((_=n.__c)&&!_.__)try{if((t=_.constructor)&&null!=t.getDerivedStateFromError&&(_.setState(t.getDerivedStateFromError(e)),o=_.__d),null!=_.componentDidCatch&&(_.componentDidCatch(e),o=_.__d),o)return _.__E=_}catch(n){e=n}throw e}},t=0,v.prototype.setState=function(e,n){var _;_=null!=this.__s&&this.__s!==this.state?this.__s:this.__s=s({},this.state),"function"==typeof e&&(e=e(s({},_),this.props)),e&&s(_,e),null!=e&&this.__v&&(n&&this.__h.push(n),g(this))},v.prototype.forceUpdate=function(e){this.__v&&(this.__e=!0,e&&this.__h.push(e),g(this))},v.prototype.render=d,o=[],r="function"==typeof Promise?Promise.prototype.then.bind(Promise.resolve()):setTimeout,k.__r=0,l=0;var F,L,N,W=0,R=[],I=_.__b,O=_.__r,V=_.diffed,q=_.__c,B=_.unmount;function $(e,n){_.__h&&_.__h(L,e,W||n),W=0;var t=L.__H||(L.__H={__:[],__h:[]});return e>=t.__.length&&t.__.push({}),t.__[e]}function j(e){return W=1,G(ee,e)}function G(e,n,_){var t=$(F++,2);return t.t=e,t.__c||(t.__=[_?_(n):ee(void 0,n),function(e){var n=t.t(t.__[0],e);t.__[0]!==n&&(t.__=[n,t.__[1]],t.__c.setState({}))}],t.__c=L),t.__}function z(e,n){var t=$(F++,4);!_.__s&&Z(t.__H,n)&&(t.__=e,t.__H=n,L.__h.push(t))}function J(e,n){var _=$(F++,7);return Z(_.__H,n)&&(_.__=e(),_.__H=n,_.__h=e),_.__}function K(){R.forEach(function(e){if(e.__P)try{e.__H.__h.forEach(X),e.__H.__h.forEach(Y),e.__H.__h=[]}catch(n){e.__H.__h=[],_.__e(n,e.__v)}}),R=[]}_.__b=function(e){L=null,I&&I(e)},_.__r=function(e){O&&O(e),F=0;var n=(L=e.__c).__H;n&&(n.__h.forEach(X),n.__h.forEach(Y),n.__h=[])},_.diffed=function(e){V&&V(e);var n=e.__c;n&&n.__H&&n.__H.__h.length&&(1!==R.push(n)&&N===_.requestAnimationFrame||((N=_.requestAnimationFrame)||function(e){var n,_=function(){clearTimeout(t),Q&&cancelAnimationFrame(n),setTimeout(e)},t=setTimeout(_,100);Q&&(n=requestAnimationFrame(_))})(K)),L=void 0},_.__c=function(e,n){n.some(function(e){try{e.__h.forEach(X),e.__h=e.__h.filter(function(e){return!e.__||Y(e)})}catch(t){n.some(function(e){e.__h&&(e.__h=[])}),n=[],_.__e(t,e.__v)}}),q&&q(e,n)},_.unmount=function(e){B&&B(e);var n=e.__c;if(n&&n.__H)try{n.__H.__.forEach(X)}catch(e){_.__e(e,n.__v)}};var Q="function"==typeof requestAnimationFrame;function X(e){var n=L;"function"==typeof e.__c&&e.__c(),L=n}function Y(e){var n=L;e.__c=e.__(),L=n}function Z(e,n){return!e||e.length!==n.length||n.some(function(n,_){return n!==e[_]})}function ee(e,n){return"function"==typeof n?n(e):n}var ne=function(e,n,_,t){var o;n[0]=0;for(var r=1;r<n.length;r++){var u=n[r++],l=n[r]?(n[0]|=u?1:2,_[n[r++]]):n[++r];3===u?t[0]=l:4===u?t[1]=Object.assign(t[1]||{},l):5===u?(t[1]=t[1]||{})[n[++r]]=l:6===u?t[1][n[++r]]+=l+"":u?(o=e.apply(l,ne(e,l,_,["",null])),t.push(o),l[0]?n[0]|=2:(n[r-2]=0,n[r]=o)):t.push(l)}return t},_e=new Map,te=function(e){var n=_e.get(this);return n||(n=new Map,_e.set(this,n)),(n=ne(this,n.get(e)||(n.set(e,n=function(e){for(var n,_,t=1,o="",r="",u=[0],l=function(e){1===t&&(e||(o=o.replace(/^\s*\n\s*|\s*\n\s*$/g,"")))?u.push(0,e,o):3===t&&(e||o)?(u.push(3,e,o),t=2):2===t&&"..."===o&&e?u.push(4,e,0):2===t&&o&&!e?u.push(5,0,!0,o):t>=5&&((o||!e&&5===t)&&(u.push(t,0,o,_),t=6),e&&(u.push(t,e,0,_),t=6)),o=""},i=0;i<e.length;i++){i&&(1===t&&l(),l(i));for(var c=0;c<e[i].length;c++)n=e[i][c],1===t?"<"===n?(l(),u=[u],t=3):o+=n:4===t?"--"===o&&">"===n?(t=1,o=""):o=n+o[0]:r?n===r?r="":o+=n:'"'===n||"'"===n?r=n:">"===n?(l(),t=1):t&&("="===n?(t=5,_=o,o=""):"/"===n&&(t<5||">"===e[i][c+1])?(l(),3===t&&(u=u[0]),t=u,(u=u[0]).push(2,0,t),t=0):" "===n||"\t"===n||"\n"===n||"\r"===n?(l(),t=2):o+=n),3===t&&"!--"===o&&(t=4,u=u[0])}return l(),u}(e)),n),arguments,[])).length>1?n:n[0]}.bind(p);e.h=p,e.html=te,e.render=function(e,t,o){var r,u,l;_.__&&_.__(e,t),u=(r="function"==typeof o)?null:o&&o.__k||t.__k,l=[],D(t,e=(!r&&o||t).__k=p(d,null,[e]),u||i,i,void 0!==t.ownerSVGElement,!r&&o?[o]:u?null:t.firstChild?n.call(t.childNodes):null,l,!r&&o?o:u?u.__e:t.firstChild,r),w(l,e)},e.Component=v,e.createContext=function(e,n){var _={__c:n="__cC"+l++,__:e,Consumer:function(e,n){return e.children(n)},Provider:function(e){var _,t;return this.getChildContext||(_=[],(t={})[n]=this,this.getChildContext=function(){return t},this.shouldComponentUpdate=function(e){this.props.value!==e.value&&_.some(g)},this.sub=function(e){_.push(e);var n=e.componentWillUnmount;e.componentWillUnmount=function(){_.splice(_.indexOf(e),1),n&&n.call(e)}}),e.children}};return _.Provider.__=_.Consumer.contextType=_},e.useState=j,e.useReducer=G,e.useEffect=function(e,n){var t=$(F++,3);!_.__s&&Z(t.__H,n)&&(t.__=e,t.__H=n,L.__H.__h.push(t))},e.useLayoutEffect=z,e.useRef=function(e){return W=5,J(function(){return{current:e}},[])},e.useImperativeHandle=function(e,n,_){W=6,z(function(){"function"==typeof e?e(n()):e&&(e.current=n())},null==_?_:_.concat(e))},e.useMemo=J,e.useCallback=function(e,n){return W=8,J(function(){return e},n)},e.useContext=function(e){var n=L.context[e.__c],_=$(F++,9);return _.c=e,n?(null==_.__&&(_.__=!0,n.sub(L)),n.props.value):e.__},e.useDebugValue=function(e,n){_.useDebugValue&&_.useDebugValue(n?n(e):e)},e.useErrorBoundary=function(e){var n=$(F++,10),_=j();return n.__=e,L.componentDidCatch||(L.componentDidCatch=function(e){n.__&&n.__(e),_[1](e)}),[_[0],function(){_[1](void 0)}]}});
+</script>
+<script>
+const { html, render, Component } = window.htmPreact;
+class App extends Component {
+  render() { const v = this.renderVals(); return html`
+<div style="position:relative;display:flex;background:var(--s);color:var(--on)">
+
+  <div class="progress" aria-hidden="true"></div>
+
+  <div aria-hidden="true" style="position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0">
+    ${v.shapes.map((s) => html`
+      <div data-shape=${s.k} style="position:absolute;left:0;top:0;width:${s.px};height:${s.px};opacity:.75;will-change:transform;box-sizing:border-box;background:${s.bg};border:${s.border};border-radius:${s.radius};clip-path:${s.clip}"></div>
+    `)}
+  </div>
+
+  ${v.showRail ? html`
+    <nav aria-label="ページ内メニュー" style="position:fixed;top:0;left:0;bottom:0;width:88px;background:var(--s);display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0;z-index:10;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;box-sizing:border-box;border-right:1px solid var(--sh)">
+      <div style="width:56px;height:56px;border-radius:16px;background:var(--pc);color:var(--opc);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;margin-bottom:12px;flex-shrink:0">${v.initial}</div>
+      ${v.navItems.map((item) => html`
+        <button type="button" onClick=${item.go} style="display:flex;flex-direction:column;align-items:center;gap:4px;width:72px;min-height:56px;flex-shrink:0">
+          <span style="width:56px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:${item.pillBg};color:${item.iconColor};transition:background-color .3s"><span class="ms" aria-hidden="true" style="font-variation-settings:'FILL' ${item.fill}">${item.icon}</span></span>
+          <span style="font-size:12px;font-weight:500;letter-spacing:.5px;color:${item.labelColor}">${item.label}</span>
+        </button>
+      `)}
+    </nav>
+  ` : null}
+
+  ${v.compact ? html`
+    <header style="position:fixed;top:0;left:0;right:0;height:64px;background:var(--sc);display:flex;align-items:center;gap:4px;padding:0 8px 0 16px;z-index:20;box-sizing:border-box">
+      <span style="flex:1;min-width:0;font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.faculty} 祭典実行委員会</span>
+      ${v.navItems.map((item) => html`
+        <button type="button" aria-label=${item.label} onClick=${item.go} style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${item.pillBg};color:${item.iconColor}"><span class="ms" aria-hidden="true" style="font-variation-settings:'FILL' ${item.fill}">${item.icon}</span></button>
+      `)}
+    </header>
+  ` : null}
+
+  <div style="position:fixed;top:${v.pickerTop};right:16px;z-index:25;display:flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:28px;background:var(--s);border:0;box-shadow:var(--e3)">
+    <input id="theme-color" type="color" value=${v.pickerValue} onInput=${v.onPick} style="width:44px;height:44px;border:0;padding:0;background:none;cursor:pointer;flex-shrink:0" />
+    <label for="theme-color" style="display:flex;flex-direction:column;gap:2px;cursor:pointer"><span style="font-size:12px;font-weight:500;color:var(--onv)">テーマ色（仮置き）</span><span style="font-size:13px;font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums">${v.pickerValue}</span></label>
+    ${v.isCustom ? html`
+      <button type="button" aria-label="学部の色に戻す" onClick=${v.resetColor} style="width:44px;height:44px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:var(--onv);margin-right:-8px"><span class="ms" aria-hidden="true">restart_alt</span></button>
+    ` : null}
+  </div>
+
+  <main style="position:relative;z-index:1;flex:1;min-width:0;padding-left:${v.mainPadLeft};padding-top:${v.mainPadTop}">
+    <div style="max-width:1200px;margin:0 auto;padding:${v.pagePad};box-sizing:border-box;display:flex;flex-direction:column;gap:${v.sectionGap}">
+
+      <section id="home" class="hero-exit" style="background:var(--pc);color:var(--opc);border-radius:32px;padding:${v.heroPad};display:flex;flex-direction:column;gap:var(--sp-6);box-shadow:var(--e2)">
+        <div style="display:flex;flex-direction:column;gap:var(--sp-3);container-type:inline-size;min-width:0">
+          <span style="font-size:14px;font-weight:500;letter-spacing:.1px;color:var(--pd)">関西大学 ${v.faculty} 祭典実行委員会</span>
+          <h1 style="margin:0;font-size:min(57px,11.5cqi);line-height:1.12;font-weight:400;letter-spacing:-.25px;text-wrap:balance">祭典のキャッチコピーを、<br />ここに入れる。</h1>
+          <p style="margin:0;font-size:16px;line-height:1.7;color:var(--pd);max-width:46ch">委員会からの一言がここに入ります。祭典のテーマや開催への思いを、2〜3文で書いてください。</p>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-1)">
+            <button type="button" onClick=${v.goNews} style="height:44px;padding:0 24px;border-radius:22px;background:var(--p);color:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px"><span class="ms" aria-hidden="true" style="font-size:18px">campaign</span>お知らせを見る</button>
+            <a href="#" style="height:44px;padding:0 24px;border-radius:22px;border:1px solid var(--o);color:var(--p);font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;text-decoration:none;box-sizing:border-box"><span class="ms" aria-hidden="true" style="font-size:18px">hub</span>統括組織サイトへ</a>
+          </div>
+        </div>
+        <div onMouseLeave=${v.photoLeave} style="display:flex;flex-direction:${v.cardDir};gap:var(--sp-2);height:${v.photoRowH}">
+          ${v.photos.map((ph) => html`
+            <div onMouseEnter=${ph.hover} style="position:relative;overflow:hidden;min-width:0;flex:${ph.flex};height:${ph.h};border-radius:${ph.radius};box-shadow:${ph.shadow};background:${ph.photoBg};color:var(--opc);transition:flex .55s cubic-bezier(.2,0,0,1),height .55s cubic-bezier(.2,0,0,1),border-radius .55s cubic-bezier(.2,0,0,1),box-shadow .55s cubic-bezier(.2,0,0,1),background-color .3s">
+              <div style="position:absolute;inset:0;padding:${v.cardPad};box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-2)">
+                <button type="button" aria-expanded=${ph.on} onClick=${ph.toggle} onFocus=${ph.hover} style="display:flex;flex-direction:${ph.headDir};align-items:${ph.headAlign};gap:12px;min-width:0;min-height:44px;flex-shrink:0">
+                  <span style="flex-shrink:0;width:40px;height:40px;border-radius:12px;background:${ph.badgeBg};color:${ph.badgeFg};display:flex;align-items:center;justify-content:center;transition:background-color .3s,color .3s"><span class="ms" aria-hidden="true" style="font-size:22px">image</span></span>
+                  <span style="min-width:0;font-size:13px;font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;writing-mode:${ph.wm};max-height:${ph.labelMaxH}">${ph.label}</span>
+                </button>
+                <div style="margin-top:auto;width:min(420px,calc(100vw - 144px));display:flex;flex-direction:column;gap:var(--sp-1);opacity:${ph.detailOp};visibility:${ph.vis};transform:translateY(${ph.detailY});transition:opacity .3s cubic-bezier(.2,0,0,1) ${ph.delay},transform .45s cubic-bezier(.2,0,0,1) ${ph.delay},visibility 0s ${ph.visDelay}">
+                  <span style="font-size:20px;font-weight:500;line-height:1.3">${ph.title}</span>
+                  <span style="font-size:14px;line-height:1.6;color:var(--pd)">キャプション（写真の説明を入力）</span>
+                </div>
+              </div>
+            </div>
+          `)}
+        </div>
+      </section>
+
+      <section id="news" style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <div class="reveal" style="display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap">
+          <h2 style="margin:0;font-size:32px;font-weight:400">お知らせ</h2>
+          <a href="#" style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:4px;min-height:44px">すべて見る<span class="ms" aria-hidden="true" style="font-size:18px">arrow_forward</span></a>
+        </div>
+        <div class="reveal reveal-late" onMouseLeave=${v.newsLeave} style="display:flex;flex-direction:${v.cardDir};gap:var(--sp-2);height:${v.newsRowH}">
+          ${v.news.map((n) => html`
+            <div onMouseEnter=${n.hover} style="position:relative;overflow:hidden;min-width:0;flex:${n.flex};height:${n.h};border-radius:${n.radius};box-shadow:${n.shadow};background:${n.bg};color:${n.fg};transition:flex .55s cubic-bezier(.2,0,0,1),height .55s cubic-bezier(.2,0,0,1),border-radius .55s cubic-bezier(.2,0,0,1),box-shadow .55s cubic-bezier(.2,0,0,1),background-color .3s">
+              <div style="position:absolute;inset:0;padding:${v.cardPad};box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-2)">
+                <button type="button" aria-expanded=${n.on} onClick=${n.toggle} onFocus=${n.hover} style="display:flex;flex-direction:${n.headDir};align-items:${n.headAlign};gap:12px;min-width:0;min-height:44px;flex-shrink:0">
+                  <span style="flex-shrink:0;width:40px;height:40px;border-radius:12px;background:${n.badgeBg};color:${n.badgeFg};display:flex;align-items:center;justify-content:center;transition:background-color .3s,color .3s"><span class="ms" aria-hidden="true" style="font-size:22px">${n.icon}</span></span>
+                  <span style="min-width:0;font-size:14px;font-weight:500;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;writing-mode:${n.wm};max-height:${n.labelMaxH}">${n.label}</span>
+                </button>
+                <span style="display:${n.teaser};font-size:15px;line-height:1.6;max-height:8em;overflow:hidden;text-wrap:pretty">${n.title}</span>
+                <div style="margin-top:auto;width:min(420px,calc(100vw - 96px));display:flex;flex-direction:column;gap:var(--sp-1);opacity:${n.detailOp};visibility:${n.vis};transform:translateY(${n.detailY});transition:opacity .3s cubic-bezier(.2,0,0,1) ${n.delay},transform .45s cubic-bezier(.2,0,0,1) ${n.delay},visibility 0s ${n.visDelay}">
+                  <span style="align-self:flex-start;height:28px;padding:0 12px;border-radius:8px;background:var(--tc);color:var(--on);font-size:12px;font-weight:500;display:flex;align-items:center">${n.cat}</span>
+                  <span style="font-size:20px;font-weight:500;line-height:1.4;text-wrap:pretty">${n.title}</span>
+                  <span style="font-size:14px;line-height:1.7;color:var(--onv)">お知らせの概要（本文の冒頭を入力）</span>
+                  <a href="#" style="height:44px;padding:0 20px;border-radius:22px;background:var(--p);color:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;align-self:flex-start;text-decoration:none">詳しく見る<span class="ms" aria-hidden="true" style="font-size:18px">arrow_forward</span></a>
+                </div>
+              </div>
+            </div>
+          `)}
+        </div>
+      </section>
+
+      <section id="members" style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <h2 class="reveal" style="margin:0;font-size:32px;font-weight:400">役員紹介</h2>
+        <div class="reveal reveal-late" onMouseLeave=${v.memberLeave} style="display:flex;flex-direction:${v.cardDir};gap:var(--sp-2);height:${v.memberRowH}">
+          ${v.members.map((m) => html`
+            <div onMouseEnter=${m.hover} style="position:relative;overflow:hidden;min-width:0;flex:${m.flex};height:${m.h};border-radius:${m.radius};box-shadow:${m.shadow};background:${m.bg};color:${m.fg};transition:flex .55s cubic-bezier(.2,0,0,1),height .55s cubic-bezier(.2,0,0,1),border-radius .55s cubic-bezier(.2,0,0,1),box-shadow .55s cubic-bezier(.2,0,0,1),background-color .3s">
+              <div style="position:absolute;inset:0;padding:${v.cardPad};box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-2)">
+                <button type="button" aria-expanded=${m.on} onClick=${m.toggle} onFocus=${m.hover} style="display:flex;flex-direction:${m.headDir};align-items:${m.headAlign};gap:12px;min-width:0;min-height:44px;flex-shrink:0">
+                  <span style="flex-shrink:0;width:40px;height:40px;border-radius:20px;background:${m.badgeBg};color:${m.badgeFg};display:flex;align-items:center;justify-content:center;transition:background-color .3s,color .3s"><span class="ms" aria-hidden="true" style="font-size:22px">person</span></span>
+                  <span style="min-width:0;font-size:14px;font-weight:500;line-height:1.3;white-space:${m.ws};overflow:hidden;text-overflow:ellipsis;writing-mode:${m.wm};max-height:${m.labelMaxH}">${m.role}</span>
+                </button>
+                <div style="margin-top:auto;width:min(300px,calc(100vw - 96px));display:flex;flex-direction:column;gap:var(--sp-1);opacity:${m.detailOp};visibility:${m.vis};transform:translateY(${m.detailY});transition:opacity .3s cubic-bezier(.2,0,0,1) ${m.delay},transform .45s cubic-bezier(.2,0,0,1) ${m.delay},visibility 0s ${m.visDelay}">
+                  <span style="width:96px;height:96px;border-radius:48px;background:var(--pt);display:flex;align-items:center;justify-content:center;color:var(--pd);font-size:11px;font-family:ui-monospace,monospace">写真</span>
+                  <span style="font-size:20px;font-weight:500">${m.name}</span>
+                  <span style="font-size:13px;color:var(--pd)">${m.dept}</span>
+                  <span style="font-size:14px;line-height:1.6;color:var(--onv)">ひとこと（コメントを入力）</span>
+                </div>
+              </div>
+            </div>
+          `)}
+        </div>
+      </section>
+
+      <section id="sns" style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <div class="reveal" style="display:flex;flex-direction:column;gap:var(--sp-1)">
+          <h2 style="margin:0;font-size:32px;font-weight:400">公式SNS・リンク</h2>
+          <p style="margin:0;font-size:16px;color:var(--onv)">最新情報は各SNSでも発信しています。</p>
+        </div>
+        <div class="reveal reveal-late" onMouseLeave=${v.snsLeave} style="display:flex;flex-direction:${v.cardDir};gap:var(--sp-2);height:${v.snsRowH}">
+          ${v.sns.map((s) => html`
+            <div onMouseEnter=${s.hover} style="position:relative;overflow:hidden;min-width:0;flex:${s.flex};height:${s.h};border-radius:${s.radius};box-shadow:${s.shadow};background:${s.bg};color:${s.fg};transition:flex .55s cubic-bezier(.2,0,0,1),height .55s cubic-bezier(.2,0,0,1),border-radius .55s cubic-bezier(.2,0,0,1),box-shadow .55s cubic-bezier(.2,0,0,1),background-color .3s">
+              <div style="position:absolute;inset:0;padding:${v.cardPad};box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-2)">
+                <button type="button" aria-expanded=${s.on} onClick=${s.toggle} onFocus=${s.hover} style="display:flex;flex-direction:${s.headDir};align-items:${s.headAlign};gap:12px;min-width:0;min-height:44px;flex-shrink:0">
+                  <span style="flex-shrink:0;width:40px;height:40px;border-radius:12px;background:${s.badgeBg};color:${s.badgeFg};display:flex;align-items:center;justify-content:center;transition:background-color .3s,color .3s"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill:currentColor"><path d=${s.path}></path></svg></span>
+                  <span style="min-width:0;font-size:15px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;writing-mode:${s.wm};max-height:${s.labelMaxH}">${s.name}</span>
+                </button>
+                <div style="margin-top:auto;width:min(320px,calc(100vw - 96px));display:flex;flex-direction:column;gap:var(--sp-1);opacity:${s.detailOp};visibility:${s.vis};transform:translateY(${s.detailY});transition:opacity .3s cubic-bezier(.2,0,0,1) ${s.delay},transform .45s cubic-bezier(.2,0,0,1) ${s.delay},visibility 0s ${s.visDelay}">
+                  <span style="font-size:14px;line-height:1.6;color:var(--onv)">${s.note}</span>
+                  <a href=${s.url} style="height:44px;padding:0 20px;border-radius:22px;background:var(--p);color:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;align-self:flex-start;text-decoration:none">${s.cta}<span class="ms" aria-hidden="true" style="font-size:18px">open_in_new</span></a>
+                </div>
+              </div>
+            </div>
+          `)}
+        </div>
+      </section>
+
+      <footer class="reveal" style="background:var(--sc);border-radius:32px;padding:${v.footPad};display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--sp-2);box-shadow:var(--e1);font-size:13px;color:var(--onv)">
+        <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:18px;font-weight:500;color:var(--on)">関西大学 ${v.faculty} 祭典実行委員会</span><span>© 2026 ${v.faculty} 祭典実行委員会</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--sp-1) var(--sp-3)"><a href="#" style="min-height:44px;display:flex;align-items:center">統括組織サイト</a><a href="#" style="min-height:44px;display:flex;align-items:center">お問い合わせ</a><a href="#" style="min-height:44px;display:flex;align-items:center">プライバシーポリシー</a></div>
+      </footer>
+    </div>
+  </main>
+</div>
+`; }
+  state = { photo: 0, news: 0, member: 0, sns: 0, active: 'home', custom: null, w: typeof window !== 'undefined' ? window.innerWidth : 1280 };
+  // 学部名 → 色相（0–360）。仮の割り当て。数値を変えるだけで全体の配色が変わる
+  hues = { '法学部': 265, '文学部': 335, '経済学部': 215, '商学部': 28, '社会学部': 145, '政策創造学部': 190, '外国語学部': 5, 'システム理工学部': 238, '環境都市工学部': 95, '化学生命工学部': 168, '総合情報学部': 300, '社会安全学部': 48, '人間健康学部': 120 };
+  nav = [
+    { id: 'home', label: 'ホーム', icon: 'home' }, { id: 'news', label: 'お知らせ', icon: 'campaign' },
+    { id: 'members', label: '役員', icon: 'badge' }, { id: 'sns', label: 'SNS', icon: 'share' },
+  ];
+  shapes = [
+    { x: 4, y: 12, s: 240, k: 'circle', c: '--pc', sp: .3, r: .015 },
+    { x: 80, y: 8, s: 150, k: 'square', c: '--tc', sp: .55, r: .06 },
+    { x: 86, y: 46, s: 280, k: 'ring', c: '--pt', sp: .22, r: 0 },
+    { x: 18, y: 64, s: 130, k: 'tri', c: '--sec', sp: .75, r: -.09 },
+    { x: 54, y: 28, s: 84, k: 'circle', c: '--tc', sp: 1.05, r: 0 },
+    { x: 64, y: 78, s: 190, k: 'square', c: '--pc', sp: .42, r: .04 },
+    { x: 34, y: 92, s: 110, k: 'ring', c: '--tt', sp: .9, r: 0 },
+    { x: 92, y: 86, s: 96, k: 'tri', c: '--pt', sp: .65, r: .08 },
+    { x: 1, y: 42, s: 64, k: 'square', c: '--pt', sp: 1.25, r: -.15 },
+    { x: 44, y: 52, s: 360, k: 'ring', c: '--sc', sp: .12, r: 0 },
+  ];
+  faculty() { const f = this.props.faculty ?? '法学部'; return this.hues[f] === undefined ? '法学部' : f; }
+  compact() { return this.state.w < 720; }
+  sy() { return window.scrollY || document.documentElement.scrollTop || 0; }
+  componentDidMount() {
+    this.onResize = () => this.setState({ w: window.innerWidth });
+    this.onScroll = () => {
+      let cur = 'home';
+      for (const n of this.nav) { const el = document.getElementById(n.id); if (el && el.getBoundingClientRect().top < 160) cur = n.id; }
+      if (cur !== this.state.active) this.setState({ active: cur });
+      if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.paintBg(); });
+    };
+    window.addEventListener('resize', this.onResize);
+    window.addEventListener('resize', this.onScroll);
+    document.addEventListener('scroll', this.onScroll, { passive: true, capture: true });
+    this.applyTheme(); this.paintBg();
+  }
+  componentDidUpdate() { this.applyTheme(); this.paintBg(); }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); window.removeEventListener('resize', this.onResize); window.removeEventListener('resize', this.onScroll); document.removeEventListener('scroll', this.onScroll, { capture: true }); }
+  // カラーピッカーで選んだ色（state.custom）があればそれを、なければ学部の色相を使う
+  hexToHsl(hex) {
+    const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, sat = 0;
+    if (d) { sat = d / (1 - Math.abs(2 * l - 1)); h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360; }
+    return [h, sat, l];
+  }
+  hslToHex(h, sat, l) {
+    const a = sat * Math.min(l, 1 - l);
+    const f = n => { const k = (n + h / 30) % 12, v = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); return Math.round(v * 255).toString(16).padStart(2, '0'); };
+    return ('#' + f(0) + f(8) + f(4)).toUpperCase();
+  }
+  theme() {
+    const lim = h => (h >= 20 && h <= 200 ? .31 : .42);
+    if (this.state.custom) {
+      const [h, sat, l] = this.hexToHsl(this.state.custom);
+      // 白文字が読めるよう、主色の明度だけ上限・下限に収める
+      return { h, k: Math.min(1, sat / .45), ps: sat, pl: Math.max(.2, Math.min(l, lim(h))) };
+    }
+    const h = this.hues[this.faculty()];
+    return { h, k: 1, ps: .48, pl: lim(h) };
+  }
+  applyTheme() {
+    const t = this.theme(), st = document.documentElement.style;
+    st.setProperty('--h', t.h.toFixed(1));
+    st.setProperty('--k', t.k.toFixed(3));
+    st.setProperty('--ps', (t.ps * 100).toFixed(1) + '%');
+    st.setProperty('--pl', (t.pl * 100).toFixed(1) + '%');
+  }
+  go(id) {
+    const el = document.getElementById(id);
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + this.sy() - (this.compact() ? 88 : 48), behavior: 'smooth' });
+    this.setState({ active: id });
+  }
+  // 背景：スクロール量に応じて図形を移動・回転・変形させる
+  paintBg() {
+    const els = document.querySelectorAll('[data-shape]'); if (!els.length) return;
+    const y = this.sy(), vh = window.innerHeight, vw = window.innerWidth;
+    const still = this.props.bgMotion === false || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const t = still ? 0 : y;
+    const max = Math.max(1, document.documentElement.scrollHeight - vh), p = still ? 0 : Math.min(1, y / max);
+    this.shapes.forEach((s, i) => {
+      const el = els[i]; if (!el) return;
+      const span = vh + s.s * 2;
+      const py = ((((s.y / 100) * vh - t * s.sp + s.s) % span) + span) % span - s.s;
+      const px = (s.x / 100) * vw + Math.sin(t / 700 + i) * 40;
+      const sc = 1 + 0.18 * Math.sin(t / 900 + i * 1.3);
+      el.style.transform = 'translate3d(' + px.toFixed(1) + 'px,' + py.toFixed(1) + 'px,0) rotate(' + (t * s.r * 4 + i * 18).toFixed(1) + 'deg) scale(' + sc.toFixed(3) + ')';
+      if (s.k === 'square') el.style.borderRadius = (10 + 40 * (0.5 + 0.5 * Math.sin(p * Math.PI * 4 + i))).toFixed(1) + '%';
+      if (s.k === 'ring') el.style.borderWidth = (6 + 18 * p).toFixed(1) + 'px';
+    });
+  }
+  // エクスパンディング・カード：kind ごとに開いているカードの番号を state に持つ
+  cards(kind, list, openH, labelMaxH) {
+    const c = this.compact(), hoverMode = (this.props.expandOn ?? 'hover') === 'hover';
+    const cur = this.state[kind], anyOpen = !c && cur >= 0 && cur < list.length;
+    return list.map((x, i) => {
+      const on = cur === i, stack = !c && !on, vert = anyOpen && !on;
+      return { ...x, on,
+        toggle: () => this.setState({ [kind]: on && (c || !hoverMode) ? -1 : i }),
+        hover: () => { if (hoverMode && !c && !on) this.setState({ [kind]: i }); },
+        flex: c ? '0 0 auto' : (on ? '4 1 0' : '1 1 0'), h: c ? (on ? openH : '76px') : 'auto',
+        bg: on ? 'var(--pc)' : 'var(--sc)', fg: on ? 'var(--opc)' : 'var(--on)', radius: on ? '28px' : '16px', shadow: on ? 'var(--e2)' : 'var(--e1)',
+        photoBg: on ? 'var(--pt)' : 'var(--s)',
+        badgeBg: on ? 'var(--p)' : 'var(--sec)', badgeFg: on ? '#FFFFFF' : 'var(--on)',
+        detailOp: on ? 1 : 0, detailY: on ? '0px' : '12px', delay: on ? '.18s' : '0s',
+        vis: on ? 'visible' : 'hidden', visDelay: on ? '0s' : '.3s',
+        headDir: stack ? 'column' : 'row', headAlign: stack ? 'flex-start' : 'center',
+        wm: vert ? 'vertical-rl' : 'horizontal-tb', ws: vert || !stack ? 'nowrap' : 'normal', labelMaxH: vert ? labelMaxH : 'none',
+        teaser: stack && !vert ? 'block' : 'none' };
+    });
+  }
+  leave(kind) { return () => { if ((this.props.autoClose ?? true) && (this.props.expandOn ?? 'hover') === 'hover' && !this.compact() && this.state[kind] !== -1) this.setState({ [kind]: -1 }); }; }
+  renderVals() {
+    const compact = this.compact(), faculty = this.faculty();
+    const navItems = this.nav.map(n => {
+      const on = n.id === this.state.active;
+      return { ...n, pillBg: on ? 'var(--sec)' : 'transparent', iconColor: on ? 'var(--on)' : 'var(--onv)', labelColor: on ? 'var(--on)' : 'var(--onv)', fill: on ? 1 : 0, go: () => this.go(n.id) };
+    });
+    const shapes = this.shapes.map(s => {
+      const v = 'var(' + s.c + ')', ring = s.k === 'ring';
+      return { k: s.k, px: s.s + 'px', bg: ring ? 'transparent' : v, border: ring ? '8px solid ' + v : '0 solid transparent', radius: s.k === 'tri' ? '0' : s.k === 'square' ? '24%' : '50%', clip: s.k === 'tri' ? 'polygon(50% 4%,100% 96%,0 96%)' : 'none' };
+    });
+    const news = [
+      { date: '2026.11.10', cat: '開催情報', icon: 'event', title: '祭典の開催日程とタイムテーブルを公開しました' },
+      { date: '2026.11.02', cat: '募集', icon: 'group_add', title: '当日スタッフ・出展団体を募集しています' },
+      { date: '2026.10.24', cat: 'お知らせ', icon: 'campaign', title: '会場マップと来場時の注意事項について' },
+      { date: '2026.10.15', cat: '委員会', icon: 'groups', title: '今年度の実行委員会が発足しました' },
+    ].map(n => ({ ...n, label: compact ? n.title : n.date }));
+    return {
+      compact, showRail: !compact, faculty, initial: faculty[0],
+      mainPadLeft: compact ? '0' : '88px', mainPadTop: compact ? '64px' : '0',
+      pickerTop: compact ? '76px' : '16px', isCustom: !!this.state.custom,
+      pickerValue: (this.state.custom || (() => { const t = this.theme(); return this.hslToHex(t.h, t.ps, t.pl); })()).toUpperCase(),
+      onPick: e => this.setState({ custom: e.target.value }), resetColor: () => this.setState({ custom: null }),
+      navItems, shapes, goNews: () => this.go('news'),
+      cardDir: compact ? 'column' : 'row',
+      // 余白（8の倍数）。セクション間は旧版の約2倍
+      pagePad: compact ? '24px 16px 48px' : '48px 48px 64px', sectionGap: compact ? '96px' : '128px',
+      heroPad: compact ? '32px 24px' : '64px', footPad: compact ? '32px 24px' : '48px', cardPad: compact ? '16px' : '24px',
+      photoRowH: compact ? 'auto' : '320px', newsRowH: compact ? 'auto' : '320px', memberRowH: compact ? 'auto' : '360px', snsRowH: compact ? 'auto' : '248px',
+      photoLeave: this.leave('photo'), newsLeave: this.leave('news'), memberLeave: this.leave('member'), snsLeave: this.leave('sns'),
+      photos: this.cards('photo', [1, 2, 3, 4].map(i => ({ label: '写真 ' + i, title: '写真 ' + i + ' のタイトル' })), '240px', '200px'),
+      news: this.cards('news', news, '300px', '200px'),
+      members: this.cards('member', [
+        { role: '委員長', name: '氏名', dept: '学年' }, { role: '副委員長', name: '氏名', dept: '学年' },
+        { role: '総務', name: '氏名', dept: '学年' }, { role: '会計', name: '氏名', dept: '学年' },
+        { role: '広報', name: '氏名', dept: '学年' }, { role: '企画', name: '氏名', dept: '学年' },
+      ], '336px', '230px'),
+      sns: this.cards('sns', [
+        { name: 'X', note: '@アカウント名 ／ 最新のお知らせを発信', cta: 'Xを開く', url: '#', path: 'M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z' },
+        { name: 'Instagram', note: '@アカウント名 ／ 準備の様子や当日の写真', cta: 'Instagramを開く', url: '#', path: 'M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077' },
+        { name: 'YouTube', note: 'チャンネル名 ／ 紹介動画・ステージ映像', cta: 'YouTubeを開く', url: '#', path: 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z' },
+        { name: 'LINE', note: '公式アカウント ／ 当日の案内を配信', cta: '友だち追加', url: '#', path: 'M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314' },
+        { name: 'お問い合わせ', note: '取材・協賛・出展のご相談はこちら', cta: 'フォームを開く', url: '#', path: 'M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z' },
+      ], '220px', '140px'),
+    };
+  }
+}
+// 設定は URL で切り替えられる： ?faculty=商学部&expandOn=click&autoClose=0&bgMotion=0
+const q = new URLSearchParams(location.search);
+const props = { faculty: q.get('faculty') || '法学部', expandOn: q.get('expandOn') === 'click' ? 'click' : 'hover', autoClose: q.get('autoClose') !== '0', bgMotion: q.get('bgMotion') !== '0' };
+render(html`<${App} ...${props} />`, document.getElementById('app'));
+</script>
+</body>
+</html>
