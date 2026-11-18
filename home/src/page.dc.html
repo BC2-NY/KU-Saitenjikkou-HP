@@ -1,0 +1,555 @@
+<style>
+html,body{margin:0;padding:0;background:#FEF7FF;color:#1D1B20;font-family:"Google Sans","Noto Sans JP",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+::selection{background:#FFB1C8;color:#3E001D}
+a{color:var(--link,#6750A4);text-decoration:none}
+a:hover{text-decoration:underline}
+:root{
+  /* 余白は8の倍数 */
+  --sp-1:8px; --sp-2:16px; --sp-3:24px; --sp-4:32px; --sp-6:48px; --sp-8:64px; --sp-12:96px; --sp-16:128px;
+}
+/* ── しましま：セクションごとにライト／ダークを切り替える。色はすべてこの変数から ── */
+/* 帯は位置指定しない（背景の図形レイヤーを帯の背景より上・内容より下に置くため） */
+.band{background:var(--bg);color:var(--fg)}
+.band-light{
+  --bg:#FEF7FF; --fg:#1D1B20; --fg2:#49454F; --line:#E7E0EC; --outline:#79747E; --link:#6750A4;
+  --card:#F3EDF7; --card-on:#EADDFF; --fg-on:#21005D; --fg-on2:#4F378B; --badge:#E8DEF8; --chip:#E8DEF8;
+  --accent:#6750A4; --on-accent:#FFFFFF; --tert:#7D5260; --on-tert:#FFFFFF; --tert-c:#FFD8E4; --on-tert-c:#31111D;
+  --panel:#F3EDF7; --viz1:#D0BCFF; --viz2:#FFD8E4; --viz3:#6750A4; --thumb:#D0BCFF;
+  --e1:0 0 0 1px hsl(262 30% 18% / .04), 0 1px 2px hsl(262 30% 18% / .06), 0 2px 8px hsl(262 30% 18% / .04);
+  --e2:0 0 0 1px hsl(262 30% 18% / .04), 0 1px 2px hsl(262 30% 18% / .06), 0 8px 16px -4px hsl(262 30% 18% / .08), 0 24px 48px -8px hsl(262 30% 18% / .12);
+}
+.band-dark{
+  --bg:#141218; --fg:#E6E0E9; --fg2:#CAC4D0; --line:#36343B; --outline:#938F99; --link:#D0BCFF;
+  --card:#211F26; --card-on:#4F378B; --fg-on:#EADDFF; --fg-on2:#D0BCFF; --badge:#36343B; --chip:#4A4458;
+  --accent:#D0BCFF; --on-accent:#381E72; --tert:#EFB8C8; --on-tert:#492532; --tert-c:#633B48; --on-tert-c:#FFD8E4;
+  --panel:#1D1B20; --viz1:#4F378B; --viz2:#633B48; --viz3:#D0BCFF; --thumb:#4A4458;
+  --e1:0 0 0 1px rgb(255 255 255 / .05), 0 1px 2px rgb(0 0 0 / .4), 0 2px 8px rgb(0 0 0 / .25);
+  --e2:0 0 0 1px rgb(255 255 255 / .06), 0 1px 2px rgb(0 0 0 / .4), 0 8px 16px -4px rgb(0 0 0 / .4), 0 24px 48px -8px rgb(0 0 0 / .5);
+}
+/* ── Sticky Split-Screen：左が内容（スクロール）、右が貼り付く図形パネル ── */
+.split{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);min-height:100vh}
+.col{position:relative;z-index:1;padding:var(--sp-16) var(--sp-8);display:flex;flex-direction:column;justify-content:center;gap:var(--sp-4);min-width:0;box-sizing:border-box}
+.viz-col{position:relative;z-index:1;min-width:0}
+/* 図形パネルを左右交互に：偶数番目のセクションは右、奇数番目は左 */
+.split-flip{grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
+.split-flip .viz-col{order:-1}
+.viz{position:sticky;top:0;height:100vh;overflow:hidden;background:var(--panel)}
+.viz-label{position:absolute;left:var(--sp-3);bottom:var(--sp-3);font-size:12px;font-family:ui-monospace,monospace;color:var(--fg2);opacity:.8}
+/* パネル内の図形：セクションのスクロール進み具合 --p（0→1、JSで設定）で動く */
+.viz .s{position:absolute;box-sizing:border-box;opacity:.9;
+  transform:translate(-50%,-50%) translate(calc(var(--p,.5) * var(--dx) * 1vmin), calc(var(--p,.5) * var(--dy) * 1vmin)) rotate(calc(var(--p,.5) * var(--rot) * 1deg)) scale(calc(1 + var(--p,.5) * var(--sc)))}
+.h2{margin:0;font-size:clamp(32px,4vw,44px);font-weight:400;line-height:1.15;letter-spacing:-.25px}
+.lead{margin:0;font-size:16px;line-height:1.7;color:var(--fg2);max-width:40ch}
+/* 960px未満は左右分割をやめて1列に（図形パネルは各セクションの先頭に帯として置く） */
+@media (max-width:959px){
+  .split,.split-flip{grid-template-columns:1fr;min-height:0}
+  .viz-col{order:-1}
+  .viz{position:relative;height:240px}
+  .col{padding:var(--sp-8) var(--sp-6) var(--sp-12)}
+}
+@media (max-width:719px){
+  .viz{height:200px}
+  .col{padding:var(--sp-6) var(--sp-2) var(--sp-8)}
+}
+/* スクロール演出（CSSのスクロール連動アニメーション。非対応ブラウザでは演出なしで普通に表示） */
+.progress{position:fixed;top:0;left:0;right:0;height:3px;background:#6750A4;transform-origin:0 50%;transform:scaleX(0);z-index:30;pointer-events:none}
+@supports (animation-timeline: view()){
+  .progress{animation:grow linear both;animation-timeline:scroll(root block)}
+  @keyframes grow{to{transform:scaleX(1)}}
+  .reveal{animation:reveal linear both;animation-timeline:view();animation-range:entry 0% entry 240px}
+  .reveal-late{animation-range:entry 48px entry 320px}
+  @keyframes reveal{from{opacity:0;transform:translateY(48px) scale(.98)}}
+}
+@media (prefers-reduced-motion: reduce){
+  .progress,.reveal{animation:none !important;opacity:1 !important;transform:none !important}
+  .progress{display:none}
+}
+.ms{font-family:"Material Symbols Rounded";font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;-webkit-font-feature-settings:"liga";font-feature-settings:"liga"}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;background:#FEF7FF">
+  <div class="progress" aria-hidden="true"></div>
+  {{ bgLayer }}
+
+  <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
+    <nav style="position:fixed;top:0;left:0;bottom:0;width:88px;background:#FEF7FF;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 0;z-index:10;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;box-sizing:border-box;border-right:1px solid #ECE6F0">
+      <div style="width:56px;height:56px;border-radius:16px;background:#EADDFF;color:#21005D;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;margin-bottom:12px;flex-shrink:0">関</div>
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="8">
+        <button sc-camel-on-click="{{ item.go }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:72px;flex-shrink:0">
+          <span style="width:56px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:{{ item.pillBg }};color:{{ item.iconColor }}" style-hover="background:#E8DEF8"><span class="ms" style="font-variation-settings:'FILL' {{ item.fill }}">{{ item.icon }}</span></span>
+          <span style="font-size:12px;font-weight:500;letter-spacing:.5px;color:{{ item.labelColor }}">{{ item.label }}</span>
+        </button>
+      </sc-for>
+    </nav>
+  </sc-if>
+
+  <sc-if value="{{ compact }}" hint-placeholder-val="{{ false }}">
+    <header style="position:fixed;top:0;left:0;right:0;height:64px;background:#F3EDF7;display:flex;align-items:center;gap:8px;padding:0 8px;z-index:20">
+      <button sc-camel-on-click="{{ openDrawer }}" style="all:unset;cursor:pointer;width:48px;height:48px;border-radius:24px;display:flex;align-items:center;justify-content:center" style-hover="background:#E8DEF8"><span class="ms">menu</span></button>
+      <span style="font-size:20px;font-weight:500">関大 祭典実行委員会</span>
+    </header>
+  </sc-if>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div sc-camel-on-click="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:30"></div>
+    <aside style="position:fixed;top:0;left:0;bottom:0;width:300px;max-width:85vw;background:#F7F2FA;border-radius:0 16px 16px 0;padding:12px;z-index:31;display:flex;flex-direction:column;gap:2px;box-sizing:border-box">
+      <div style="padding:16px 16px 18px;font-size:14px;font-weight:500;color:#49454F">メニュー</div>
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="8">
+        <button sc-camel-on-click="{{ item.go }}" style="all:unset;cursor:pointer;height:56px;border-radius:28px;display:flex;align-items:center;gap:12px;padding:0 16px;background:{{ item.pillBg }};color:{{ item.labelColor }}">
+          <span class="ms">{{ item.icon }}</span><span style="font-size:14px;font-weight:500">{{ item.label }}</span>
+        </button>
+      </sc-for>
+    </aside>
+  </sc-if>
+
+  <main style="flex:1;min-width:0;padding-left:{{ mainPadLeft }};padding-top:{{ mainPadTop }}">
+
+    <!-- 01 ヒーロー（ライト） -->
+    <section id="home" class="band band-light" data-screen-label="01 Hero">
+      <div class="split">
+        <div class="col">
+          <span style="font-size:14px;font-weight:500;letter-spacing:.1px;color:var(--fg-on2)">関西大学 祭典実行委員会 統括組織（仮称）</span>
+          <h1 style="margin:0;font-size:clamp(40px,5.2vw,64px);line-height:1.1;font-weight:400;letter-spacing:-.5px;color:var(--fg-on)"><span style="white-space:nowrap">学部の祭典を、</span><br><span style="white-space:nowrap">ひとつにつなぐ。</span></h1>
+          <p class="lead">各学部の祭典実行委員会と統一祭の公式ポータル。</p>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-1)">
+            <button sc-camel-on-click="{{ goCommittees }}" style="all:unset;cursor:pointer;height:48px;padding:0 24px;border-radius:24px;background:var(--accent);color:var(--on-accent);font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;box-shadow:var(--e1)"><span class="ms" style="font-size:20px">groups</span>委員会を見る</button>
+            <a href="#" style="height:48px;padding:0 24px;border-radius:24px;border:1px solid var(--outline);color:var(--link);font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;text-decoration:none;box-sizing:border-box"><span class="ms" style="font-size:20px">celebration</span>統一祭サイトへ</a>
+          </div>
+        </div>
+        <div class="viz-col">{{ viz.home }}</div>
+      </div>
+    </section>
+
+    <!-- 02 お知らせ（ダーク） -->
+    <section id="news" class="band band-dark" data-screen-label="02 News">
+      <div class="split split-flip">
+        <div class="col">
+          <div class="reveal" style="display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap">
+            <h2 class="h2">お知らせ</h2>
+            <a href="#" style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:4px;min-height:44px">すべて見る<span class="ms" style="font-size:18px">arrow_forward</span></a>
+          </div>
+          <div class="reveal" style="display:flex;flex-wrap:wrap;gap:var(--sp-1)">
+            <sc-for list="{{ newsFilters }}" as="f" hint-placeholder-count="4">
+              <button sc-camel-on-click="{{ f.pick }}" style="all:unset;cursor:pointer;height:32px;padding:0 16px;border-radius:8px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.color }};font-size:14px;font-weight:500;display:flex;align-items:center">{{ f.label }}</button>
+            </sc-for>
+          </div>
+          <div class="reveal reveal-late" style="background:var(--card);border-radius:24px;overflow:hidden;box-shadow:var(--e1)">
+            <sc-for list="{{ newsList }}" as="n" hint-placeholder-count="3">
+              <a href="#" style="display:grid;grid-template-columns:minmax(0,1fr) 24px;gap:var(--sp-2);align-items:center;padding:var(--sp-3);border-bottom:1px solid var(--line);color:var(--fg);text-decoration:none" style-hover="background:var(--badge)">
+                <span style="display:flex;flex-direction:column;gap:6px;min-width:0">
+                  <span style="font-size:12px;color:var(--fg2);font-variant-numeric:tabular-nums">{{ n.date }} ・ <span style="color:var(--tert);font-weight:500">{{ n.cat }}</span></span>
+                  <span style="font-size:17px;line-height:1.5;text-wrap:pretty">{{ n.title }}</span>
+                </span>
+                <span class="ms" style="color:var(--fg2)">chevron_right</span>
+              </a>
+            </sc-for>
+          </div>
+        </div>
+        <div class="viz-col">{{ viz.news }}</div>
+      </div>
+    </section>
+
+    <!-- 03 祭典実行委員会（ライト） -->
+    <section id="committees" class="band band-light" data-screen-label="03 Committees">
+      <div class="split">
+        <div class="col">
+          <div class="reveal" style="display:flex;flex-direction:column;gap:var(--sp-1)">
+            <h2 class="h2">祭典実行委員会</h2>
+            <p class="lead">各学部の委員会ページへ。</p>
+          </div>
+          <a href="#" class="reveal" style="display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3);border-radius:24px;background:var(--tert-c);color:var(--on-tert-c);text-decoration:none;box-shadow:var(--e1)">
+            <span style="width:56px;height:56px;border-radius:16px;background:var(--tert);color:var(--on-tert);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="ms">celebration</span></span>
+            <span style="flex:1;display:flex;flex-direction:column;gap:4px"><span style="font-size:22px;font-weight:500">統一祭</span><span style="font-size:14px">全学部合同の祭典 — 特設サイトへ</span></span>
+            <span class="ms">open_in_new</span>
+          </a>
+          <div class="reveal reveal-late" style="display:flex;flex-direction:column;gap:var(--sp-2)">
+            <sc-for list="{{ committeeRows }}" as="row" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:{{ cardDir }};gap:var(--sp-2);height:{{ committeeRowH }}">
+                <sc-for list="{{ row.items }}" as="c" hint-placeholder-count="4">
+                  <div role="button" tabindex="0" sc-camel-on-click="{{ c.toggle }}" sc-camel-on-mouse-enter="{{ c.hover }}" style="position:relative;overflow:hidden;cursor:pointer;min-width:0;outline:none;flex:{{ c.flex }};height:{{ c.h }};border-radius:{{ c.radius }};box-shadow:{{ c.shadow }};background:{{ c.bg }};color:{{ c.fg }};transition:flex .55s cubic-bezier(.2,0,0,1),height .55s cubic-bezier(.2,0,0,1),border-radius .55s cubic-bezier(.2,0,0,1),box-shadow .55s cubic-bezier(.2,0,0,1),background-color .3s">
+                    <div style="position:absolute;inset:0;padding:var(--sp-2);box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-2)">
+                      <div style="display:flex;flex-direction:{{ c.headDir }};align-items:{{ c.headAlign }};gap:12px;min-width:0;flex-shrink:0">
+                        <span style="flex-shrink:0;width:40px;height:40px;border-radius:12px;background:{{ c.badgeBg }};color:{{ c.badgeFg }};display:flex;align-items:center;justify-content:center;font-weight:700;transition:background-color .3s,color .3s">{{ c.initial }}</span>
+                        <span style="min-width:0;min-height:0;font-size:15px;font-weight:500;line-height:1.3;white-space:{{ c.ws }};overflow:hidden;text-overflow:ellipsis;writing-mode:{{ c.wm }};max-height:{{ c.labelMaxH }}">{{ c.short }}</span>
+                      </div>
+                      <div style="margin-top:auto;width:{{ detailW }};display:flex;flex-direction:column;gap:var(--sp-1);opacity:{{ c.detailOp }};transform:translateY({{ c.detailY }});transition:opacity .3s cubic-bezier(.2,0,0,1) {{ c.delay }},transform .45s cubic-bezier(.2,0,0,1) {{ c.delay }}">
+                        <span style="font-size:20px;font-weight:500;line-height:1.3">{{ c.name }}</span>
+                        <span style="font-size:13px;color:var(--fg-on2)">{{ c.campus }}</span>
+                        <a href="#" style="height:36px;padding:0 16px;border-radius:18px;background:var(--accent);color:var(--on-accent);font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;align-self:flex-start;text-decoration:none">委員会ページへ<span class="ms" style="font-size:18px">arrow_forward</span></a>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="viz-col">{{ viz.committees }}</div>
+      </div>
+    </section>
+
+    <!-- 04 アーカイブ（ダーク） -->
+    <section id="archive" class="band band-dark" data-screen-label="04 Archive">
+      <div class="split split-flip">
+        <div class="col">
+          <div class="reveal" style="display:flex;flex-direction:column;gap:var(--sp-1)">
+            <h2 class="h2">アーカイブ</h2>
+            <p class="lead">過去の祭典イベントサイト。</p>
+          </div>
+          <div class="reveal reveal-late" style="display:flex;flex-direction:column;gap:var(--sp-2)">
+            <sc-for list="{{ archiveRows }}" as="row" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:{{ cardDir }};gap:var(--sp-2);height:{{ archiveRowH }}">
+                <sc-for list="{{ row.items }}" as="a" hint-placeholder-count="3">
+                  <div role="button" tabindex="0" sc-camel-on-click="{{ a.toggle }}" sc-camel-on-mouse-enter="{{ a.hover }}" style="position:relative;overflow:hidden;cursor:pointer;min-width:0;outline:none;flex:{{ a.flex }};height:{{ a.h }};border-radius:{{ a.radius }};box-shadow:{{ a.shadow }};background:{{ a.bg }};color:{{ a.fg }};transition:flex .55s cubic-bezier(.2,0,0,1),height .55s cubic-bezier(.2,0,0,1),border-radius .55s cubic-bezier(.2,0,0,1),box-shadow .55s cubic-bezier(.2,0,0,1),background-color .3s">
+                    <div style="position:absolute;inset:0;padding:var(--sp-2);box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-2)">
+                      <div style="display:flex;flex-direction:{{ a.headDir }};align-items:{{ a.headAlign }};gap:6px;min-width:0;flex-shrink:0;min-height:40px;justify-content:center">
+                        <span style="font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;writing-mode:{{ a.wm }}">{{ a.year }}</span>
+                      </div>
+                      <div style="margin-top:auto;width:{{ detailW }};display:flex;flex-direction:column;gap:var(--sp-1);opacity:{{ a.detailOp }};transform:translateY({{ a.detailY }});transition:opacity .3s cubic-bezier(.2,0,0,1) {{ a.delay }},transform .45s cubic-bezier(.2,0,0,1) {{ a.delay }}">
+                        <span style="aspect-ratio:16/9;border-radius:16px;background:var(--thumb);display:flex;align-items:center;justify-content:center;color:var(--fg-on2);font-size:12px;font-family:ui-monospace,monospace">{{ a.year }} サムネイル</span>
+                        <span style="font-size:20px;font-weight:500">{{ a.title }}</span>
+                        <a href="#" style="height:36px;padding:0 16px;border-radius:18px;background:var(--accent);color:var(--on-accent);font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;align-self:flex-start;text-decoration:none">サイトを見る<span class="ms" style="font-size:18px">open_in_new</span></a>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="viz-col">{{ viz.archive }}</div>
+      </div>
+    </section>
+
+    <!-- 05 役員・スタッフ（ライト） -->
+    <section id="members" class="band band-light" data-screen-label="05 Members">
+      <div class="split">
+        <div class="col">
+          <div class="reveal" style="display:flex;flex-direction:column;gap:var(--sp-1)">
+            <h2 class="h2">役員・スタッフ</h2>
+            <p class="lead">統括組織のメンバー。</p>
+          </div>
+          <div class="reveal reveal-late" style="display:flex;flex-direction:column;gap:var(--sp-2)">
+            <sc-for list="{{ memberRows }}" as="row" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:{{ cardDir }};gap:var(--sp-2);height:{{ memberRowH }}">
+                <sc-for list="{{ row.items }}" as="m" hint-placeholder-count="3">
+                  <div role="button" tabindex="0" sc-camel-on-click="{{ m.toggle }}" sc-camel-on-mouse-enter="{{ m.hover }}" style="position:relative;overflow:hidden;cursor:pointer;min-width:0;outline:none;flex:{{ m.flex }};height:{{ m.h }};border-radius:{{ m.radius }};box-shadow:{{ m.shadow }};background:{{ m.bg }};color:{{ m.fg }};transition:flex .55s cubic-bezier(.2,0,0,1),height .55s cubic-bezier(.2,0,0,1),border-radius .55s cubic-bezier(.2,0,0,1),box-shadow .55s cubic-bezier(.2,0,0,1),background-color .3s">
+                    <div style="position:absolute;inset:0;padding:var(--sp-2);box-sizing:border-box;display:flex;flex-direction:column;gap:var(--sp-2)">
+                      <div style="display:flex;flex-direction:{{ m.headDir }};align-items:{{ m.headAlign }};gap:12px;min-width:0;flex-shrink:0">
+                        <span style="flex-shrink:0;width:40px;height:40px;border-radius:20px;background:{{ m.badgeBg }};color:{{ m.badgeFg }};display:flex;align-items:center;justify-content:center;transition:background-color .3s,color .3s"><span class="ms" style="font-size:22px">person</span></span>
+                        <span style="min-width:0;min-height:0;font-size:14px;font-weight:500;line-height:1.3;white-space:{{ m.ws }};overflow:hidden;text-overflow:ellipsis;writing-mode:{{ m.wm }};max-height:{{ m.labelMaxH }}">{{ m.role }}</span>
+                      </div>
+                      <div style="margin-top:auto;width:{{ detailW }};display:flex;flex-direction:column;gap:var(--sp-1);opacity:{{ m.detailOp }};transform:translateY({{ m.detailY }});transition:opacity .3s cubic-bezier(.2,0,0,1) {{ m.delay }},transform .45s cubic-bezier(.2,0,0,1) {{ m.delay }}">
+                        <span style="width:80px;height:80px;border-radius:40px;background:var(--thumb);display:flex;align-items:center;justify-content:center;color:var(--fg-on2);font-size:11px;font-family:ui-monospace,monospace">写真</span>
+                        <span style="font-size:20px;font-weight:500">{{ m.name }}</span>
+                        <span style="font-size:13px;color:var(--fg-on2)">{{ m.dept }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="viz-col">{{ viz.members }}</div>
+      </div>
+    </section>
+
+    <!-- 06 歴史と紹介（ダーク） -->
+    <section id="history" class="band band-dark" data-screen-label="06 History">
+      <div class="split split-flip">
+        <div class="col">
+          <div class="reveal" style="display:flex;flex-direction:column;gap:var(--sp-2)">
+            <h2 class="h2">歴史と紹介</h2>
+            <p class="lead">組織の成り立ちと役割の紹介文がここに入ります。</p>
+          </div>
+          <ol class="reveal reveal-late" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column">
+            <sc-for list="{{ history }}" as="h" hint-placeholder-count="4">
+              <li style="display:grid;grid-template-columns:72px 16px minmax(0,1fr);gap:var(--sp-2);padding-bottom:var(--sp-4)">
+                <span style="font-size:14px;font-weight:500;color:var(--link);font-variant-numeric:tabular-nums">{{ h.year }}</span>
+                <span style="width:12px;height:12px;border-radius:6px;background:var(--link);margin-top:4px"></span>
+                <span style="font-size:16px;line-height:1.6">{{ h.text }}</span>
+              </li>
+            </sc-for>
+          </ol>
+        </div>
+        <div class="viz-col">{{ viz.history }}</div>
+      </div>
+    </section>
+
+    <!-- 07 3Dマップ（ライト）：右パネル＝マップ本体 -->
+    <section id="map" class="band band-light" data-screen-label="07 Map">
+      <div class="split">
+        <div class="col">
+          <div class="reveal" style="display:flex;flex-direction:column;gap:var(--sp-1)">
+            <h2 class="h2">千里山キャンパス<br>3Dマップ</h2>
+            <p class="lead">会場と各委員会ブースの位置。</p>
+          </div>
+          <div class="reveal reveal-late" style="display:flex;flex-wrap:wrap;gap:var(--sp-1)">
+            <sc-for list="{{ mapLayers }}" as="l" hint-placeholder-count="3">
+              <span style="height:32px;padding:0 12px;border-radius:8px;background:var(--chip);color:var(--fg);font-size:13px;font-weight:500;display:flex;align-items:center">{{ l }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <div class="viz-col">
+          <div class="viz" style="background:#1D192B;color:#E8DEF8;display:flex;align-items:center;justify-content:center">
+            <span style="font-size:13px;font-family:ui-monospace,monospace;opacity:.8">3D マップ（three.js 等で実装予定）</span>
+            <div style="position:absolute;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px">
+              <span style="width:40px;height:40px;border-radius:12px;background:#4A4458;display:flex;align-items:center;justify-content:center"><span class="ms">add</span></span>
+              <span style="width:40px;height:40px;border-radius:12px;background:#4A4458;display:flex;align-items:center;justify-content:center"><span class="ms">remove</span></span>
+              <span style="width:40px;height:40px;border-radius:12px;background:#4A4458;display:flex;align-items:center;justify-content:center"><span class="ms">3d_rotation</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 FAQ（ダーク） -->
+    <section id="faq" class="band band-dark" data-screen-label="08 FAQ">
+      <div class="split split-flip">
+        <div class="col">
+          <h2 class="h2 reveal">よくある質問</h2>
+          <div class="reveal reveal-late" style="display:flex;flex-direction:column;gap:var(--sp-1)">
+            <sc-for list="{{ faqs }}" as="q" hint-placeholder-count="4">
+              <div style="border-radius:16px;background:{{ q.bg }};overflow:hidden;box-shadow:var(--e1)">
+                <button sc-camel-on-click="{{ q.toggle }}" style="all:unset;cursor:pointer;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);min-height:56px">
+                  <span style="flex:1;font-size:16px;font-weight:500">{{ q.q }}</span>
+                  <span class="ms" style="color:var(--fg2)">{{ q.icon }}</span>
+                </button>
+                <sc-if value="{{ q.open }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:0;padding:0 var(--sp-3) var(--sp-3);font-size:15px;line-height:1.7;color:var(--fg2)">{{ q.a }}</p>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="viz-col">{{ viz.faq }}</div>
+      </div>
+    </section>
+
+    <!-- フッター（ライト） -->
+    <footer id="footer" class="band band-light" data-screen-label="09 Footer">
+      <div style="position:relative;z-index:1;padding:{{ footPad }};display:flex;flex-direction:column;gap:var(--sp-4)">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--sp-3);align-items:center">
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;font-weight:500">関西大学 祭典実行委員会 統括組織（仮称）</span><span style="font-size:14px;color:var(--fg2)">公式SNSをフォロー</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--sp-1)">
+            <sc-for list="{{ sns }}" as="s" hint-placeholder-count="4">
+              <a href="#" style="height:40px;padding:0 16px;border-radius:20px;background:var(--chip);color:var(--fg);font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:#D0BCFF"><span class="ms" style="font-size:18px">{{ s.icon }}</span>{{ s.name }}</a>
+            </sc-for>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--line);padding-top:var(--sp-3);display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--sp-2);font-size:13px;color:var(--fg2)">
+          <span>© 2026 関西大学 祭典実行委員会 統括組織</span>
+          <div style="display:flex;gap:16px"><a href="#">お問い合わせ</a><a href="#">プライバシーポリシー</a><a href="#">アクセシビリティ</a></div>
+        </div>
+      </div>
+    </footer>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;railLabels&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Navigation&quot;},&quot;bgMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Background&quot;},&quot;expandOn&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;hover&quot;,&quot;click&quot;],&quot;default&quot;:&quot;hover&quot;,&quot;tsType&quot;:&quot;'hover' | 'click'&quot;,&quot;section&quot;:&quot;Cards&quot;}}">
+class Component extends DCLogic {
+  state = { committee: 0, archive: 0, member: 0, active: 'home', w: typeof window !== 'undefined' ? window.innerWidth : 1200, drawer: false, filter: 'すべて', openFaq: 0 };
+  componentDidMount() {
+    this.onResize = () => this.setState({ w: window.innerWidth });
+    this.onScroll = () => {
+      let cur = 'home';
+      for (const n of this.nav) { const el = document.getElementById(n.id); if (el && el.getBoundingClientRect().top < 160) cur = n.id; }
+      if (cur !== this.state.active) this.setState({ active: cur });
+    };
+    window.addEventListener('resize', this.onResize);
+    window.addEventListener('scroll', this.onScroll, { passive: true });
+    this.tick = () => { this.raf = 0; this.paintBg(); };
+    this.onBg = () => { if (!this.raf) this.raf = requestAnimationFrame(this.tick); };
+    window.addEventListener('scroll', this.onBg, { passive: true });
+    window.addEventListener('resize', this.onBg);
+    // カードの開閉などで帯の位置が変わったときも、背景の切り替え位置を更新する
+    if (window.ResizeObserver) { this.ro = new ResizeObserver(this.onBg); this.ro.observe(document.body); }
+    this.paintBg();
+  }
+  componentWillUnmount() { cancelAnimationFrame(this.raf); if (this.ro) this.ro.disconnect(); window.removeEventListener('scroll', this.onBg); window.removeEventListener('resize', this.onBg); window.removeEventListener('resize', this.onResize); window.removeEventListener('scroll', this.onScroll); }
+  nav = [
+    { id: 'home', label: 'ホーム', icon: 'home' }, { id: 'news', label: 'お知らせ', icon: 'campaign' },
+    { id: 'committees', label: '委員会', icon: 'groups' }, { id: 'archive', label: 'アーカイブ', icon: 'inventory_2' },
+    { id: 'members', label: '組織', icon: 'badge' }, { id: 'history', label: '歴史', icon: 'history_edu' },
+    { id: 'map', label: 'マップ', icon: 'map' }, { id: 'faq', label: 'FAQ', icon: 'help' },
+  ];
+  // しましまの帯：上から順に。dark の帯では背景の図形が反転して見える
+  bands = [['home', 'light'], ['news', 'dark'], ['committees', 'light'], ['archive', 'dark'], ['members', 'light'], ['history', 'dark'], ['map', 'light'], ['faq', 'dark'], ['footer', 'light']];
+  go(id) {
+    const el = document.getElementById(id);
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (this.compact() ? 64 : 0), behavior: 'smooth' });
+    this.setState({ active: id, drawer: false });
+  }
+  compact() { return this.state.w < 720; }
+  // 960px未満は1列表示。カードは縦に並べてタップで開閉
+  stack() { return this.state.w < 960; }
+  shapes = [
+    { x: 4, y: 12, s: 240, k: 'circle', c: '#EADDFF', sp: .3, r: .015 },
+    { x: 80, y: 8, s: 150, k: 'square', c: '#FFD8E4', sp: .55, r: .06 },
+    { x: 86, y: 46, s: 280, k: 'ring', c: '#D0BCFF', sp: .22, r: 0 },
+    { x: 18, y: 64, s: 130, k: 'tri', c: '#E8DEF8', sp: .75, r: -.09 },
+    { x: 54, y: 28, s: 84, k: 'circle', c: '#FFD8E4', sp: 1.05, r: 0 },
+    { x: 64, y: 78, s: 190, k: 'square', c: '#EADDFF', sp: .42, r: .04 },
+    { x: 34, y: 92, s: 110, k: 'ring', c: '#FFB1C8', sp: .9, r: 0 },
+    { x: 92, y: 86, s: 96, k: 'tri', c: '#D0BCFF', sp: .65, r: .08 },
+    { x: 1, y: 42, s: 64, k: 'square', c: '#D0BCFF', sp: 1.25, r: -.15 },
+    { x: 44, y: 52, s: 360, k: 'ring', c: '#F3EDF7', sp: .12, r: 0 },
+  ];
+  shapeEls = []; shapeElsD = [];
+  // 背景：図形を動かし、ライト／ダークの帯の範囲で「通常」と「反転」の2枚を切り替える。各セクションの進み具合 --p も更新する
+  paintBg() {
+    const y = window.scrollY, vh = window.innerHeight, vw = window.innerWidth;
+    const still = this.props.bgMotion === false || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const t = still ? 0 : y;
+    const max = Math.max(1, document.documentElement.scrollHeight - vh), p = still ? 0 : y / max;
+    this.shapes.forEach((s, i) => {
+      const span = vh + s.s * 2;
+      const py = ((((s.y / 100) * vh - t * s.sp + s.s) % span) + span) % span - s.s;
+      const px = (s.x / 100) * vw + Math.sin(t / 700 + i) * 40;
+      const sc = 1 + 0.18 * Math.sin(t / 900 + i * 1.3);
+      const tf = 'translate3d(' + px.toFixed(1) + 'px,' + py.toFixed(1) + 'px,0) rotate(' + (t * s.r * 4 + i * 18).toFixed(1) + 'deg) scale(' + sc.toFixed(3) + ')';
+      const br = s.k === 'square' ? (10 + 40 * (0.5 + 0.5 * Math.sin(p * Math.PI * 4 + i))).toFixed(1) + '%' : null;
+      const bw = s.k === 'ring' ? (6 + 18 * p).toFixed(1) + 'px' : null;
+      for (const el of [this.shapeEls[i], this.shapeElsD[i]]) {
+        if (!el) continue;
+        el.style.transform = tf;
+        if (br) el.style.borderRadius = br;
+        if (bw) el.style.borderWidth = bw;
+      }
+    });
+    const light = [], dark = [];
+    for (const [id, theme] of this.bands) {
+      const el = document.getElementById(id); if (!el) continue;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--p', still ? '0.5' : Math.min(1, Math.max(0, (vh - r.top) / (r.height + vh))).toFixed(4));
+      if (r.bottom <= 0 || r.top >= vh) continue;
+      (theme === 'dark' ? dark : light).push('M0 ' + Math.max(0, r.top).toFixed(1) + 'H' + vw + 'V' + Math.min(vh, r.bottom).toFixed(1) + 'H0Z');
+    }
+    if (this.layerL) this.layerL.style.clipPath = light.length ? "path('" + light.join('') + "')" : 'inset(100%)';
+    if (this.layerD) this.layerD.style.clipPath = dark.length ? "path('" + dark.join('') + "')" : 'inset(100%)';
+  }
+  bgLayer() {
+    if (this._bg) return this._bg;
+    const layer = (dark) => React.createElement('div', {
+      ref: el => { if (dark) this.layerD = el; else this.layerL = el; },
+      // 反転レイヤー：明度を反転しつつ色相は保つ（invert＋180度の色相回転）
+      style: { position: 'absolute', inset: 0, filter: dark ? 'invert(1) hue-rotate(180deg)' : 'none', clipPath: 'inset(100%)' },
+    }, this.shapes.map((s, i) => {
+      const st = { position: 'absolute', left: 0, top: 0, width: s.s + 'px', height: s.s + 'px', willChange: 'transform', opacity: .75 };
+      if (s.k === 'circle') Object.assign(st, { background: s.c, borderRadius: '50%' });
+      if (s.k === 'square') Object.assign(st, { background: s.c, borderRadius: '24%' });
+      if (s.k === 'ring') Object.assign(st, { border: '8px solid ' + s.c, borderRadius: '50%', boxSizing: 'border-box' });
+      if (s.k === 'tri') Object.assign(st, { background: s.c, clipPath: 'polygon(50% 4%,100% 96%,0 96%)' });
+      return React.createElement('div', { key: i, ref: el => { (dark ? this.shapeElsD : this.shapeEls)[i] = el; }, style: st });
+    }));
+    this._bg = React.createElement('div', { 'aria-hidden': true, style: { position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 } }, layer(false), layer(true));
+    return this._bg;
+  }
+  // 右パネルの図形（仮置き）。位置・大きさは vmin、動きはセクションの進み具合 --p に比例（CSS 側で計算）
+  vizShapes = [
+    { k: 'circle', x: 34, y: 36, s: 38, ci: 0, dx: 8, dy: 26, rot: 0, sc: .35 },
+    { k: 'ring', x: 68, y: 62, s: 30, ci: 2, dx: -18, dy: -24, rot: 0, sc: -.25 },
+    { k: 'square', x: 64, y: 26, s: 18, ci: 1, dx: -10, dy: 40, rot: 180, sc: 0 },
+    { k: 'tri', x: 30, y: 74, s: 16, ci: 2, dx: 22, dy: -30, rot: -140, sc: .2 },
+    { k: 'circle', x: 82, y: 84, s: 6, ci: 1, dx: -40, dy: -56, rot: 0, sc: 1 },
+  ];
+  vizPanel(idx, label) {
+    const cols = ['var(--viz1)', 'var(--viz2)', 'var(--viz3)'], flip = idx % 2 === 1;
+    const kids = this.vizShapes.map((d, i) => {
+      const c = cols[(d.ci + idx) % 3];
+      const st = { left: (flip ? 100 - d.x : d.x) + '%', top: d.y + '%', width: d.s + 'vmin', height: d.s + 'vmin', '--dx': flip ? -d.dx : d.dx, '--dy': d.dy, '--rot': flip ? -d.rot : d.rot, '--sc': d.sc };
+      if (d.k === 'circle') Object.assign(st, { background: c, borderRadius: '50%' });
+      if (d.k === 'ring') Object.assign(st, { border: 'calc(1.2vmin + var(--p,.5) * 2.4vmin) solid ' + c, borderRadius: '50%' });
+      if (d.k === 'square') Object.assign(st, { background: c, borderRadius: 'calc(8% + var(--p,.5) * 42%)' });
+      if (d.k === 'tri') Object.assign(st, { background: c, clipPath: 'polygon(50% 4%,100% 96%,0 96%)' });
+      return React.createElement('div', { key: i, className: 's', style: st });
+    });
+    kids.push(React.createElement('span', { key: 'l', className: 'viz-label' }, label));
+    return React.createElement('div', { className: 'viz', 'aria-hidden': true }, kids);
+  }
+  card(kind, i, extra) {
+    const on = this.state[kind] === i, c = this.stack(), hoverMode = (this.props.expandOn ?? 'hover') === 'hover';
+    return { ...extra, on,
+      toggle: () => this.setState({ [kind]: on && c ? -1 : i }),
+      hover: () => { if (hoverMode && !c && !on) this.setState({ [kind]: i }); },
+      flex: c ? '0 0 auto' : (on ? '4 1 0' : '1 1 0'), h: c ? (on ? '${H}' : '72px') : 'auto',
+      bg: on ? 'var(--card-on)' : 'var(--card)', fg: on ? 'var(--fg-on)' : 'var(--fg)', radius: on ? '28px' : '16px', shadow: on ? 'var(--e2)' : 'var(--e1)',
+      badgeBg: on ? 'var(--accent)' : 'var(--badge)', badgeFg: on ? 'var(--on-accent)' : 'var(--fg)',
+      detailOp: on ? 1 : 0, detailY: on ? '0px' : '12px', delay: on ? '.18s' : '0s' };
+  }
+  cards(kind, list, openH) { return list.map((x, i) => { const o = this.card(kind, i, x); if (o.h === '${H}') o.h = openH; return o; }); }
+  squeeze(list, labelMaxH) {
+    const anyOpen = !this.stack() && list.some(o => o.on);
+    const c = this.stack(); list.forEach(o => { const stack = !c && !o.on, vert = anyOpen && !o.on; Object.assign(o, { headDir: stack ? 'column' : 'row', headAlign: stack ? 'flex-start' : 'center', wm: vert ? 'vertical-rl' : 'horizontal-tb', ws: vert || !stack ? 'nowrap' : 'normal', labelMaxH: vert ? labelMaxH : 'none' }); });
+    return list;
+  }
+  // 左カラムの幅に合わせて1行のカード数を決め、行ごとの枚数をなるべく均等に分ける
+  rows(all, labelMaxH) {
+    if (this.stack()) return [{ items: this.squeeze(all, labelMaxH) }];
+    const colW = (this.state.w - 88) * 3 / 5 - 128;
+    let per = 2; for (let k = 5; k >= 2; k--) if ((colW - (k - 1) * 16) / (k + 3) >= 76) { per = k; break; }
+    const n = Math.ceil(all.length / per), out = []; let i = 0;
+    for (let r = 0; r < n; r++) { const size = Math.ceil((all.length - i) / (n - r)); out.push({ items: this.squeeze(all.slice(i, i + size), labelMaxH) }); i += size; }
+    return out;
+  }
+  renderVals() {
+    const compact = this.compact(), stack = this.stack();
+    const showLabels = this.props.railLabels ?? true;
+    const navItems = this.nav.map(n => {
+      const on = n.id === this.state.active;
+      return { ...n, label: showLabels || compact ? n.label : '', pillBg: on ? '#E8DEF8' : 'transparent', iconColor: on ? '#1D192B' : '#49454F', labelColor: on ? '#1D1B20' : '#49454F', fill: on ? 1 : 0, go: () => this.go(n.id) };
+    });
+    const news = [
+      { date: '2026.11.10', cat: '統一祭', title: '統一祭2026 出展団体の募集を開始しました' },
+      { date: '2026.11.02', cat: '募集', title: '2027年度 実行委員スタッフ募集のお知らせ' },
+      { date: '2026.10.24', cat: 'お知らせ', title: '千里山キャンパス 3Dマップ（β版）を公開予定です' },
+      { date: '2026.10.15', cat: '委員会', title: '商学部祭典実行委員会 特設ページを更新しました' },
+    ];
+    const cats = ['すべて', 'お知らせ', '統一祭', '委員会', '募集'];
+    const newsFilters = cats.map(c => {
+      const on = c === this.state.filter;
+      return { label: c, bg: on ? 'var(--chip)' : 'transparent', border: on ? 'var(--chip)' : 'var(--outline)', color: on ? 'var(--fg)' : 'var(--fg2)', pick: () => this.setState({ filter: c }) };
+    });
+    const faculties = [
+      ['法学部', '千里山'], ['文学部', '千里山'], ['経済学部', '千里山'], ['商学部', '千里山'], ['社会学部', '千里山'],
+      ['政策創造学部', '千里山'], ['外国語学部', '千里山'], ['システム理工学部', '千里山'], ['環境都市工学部', '千里山'],
+      ['化学生命工学部', '千里山'], ['総合情報学部', '高槻'], ['社会安全学部', '高槻ミューズ'], ['人間健康学部', '堺'],
+    ];
+    const faqRaw = [
+      { q: '実行委員に参加するには？', a: '各学部の祭典実行委員会ページから募集情報をご確認ください。' },
+      { q: '統一祭とは何ですか？', a: '全学部の祭典実行委員会が合同で開催する祭典です。詳細は統一祭サイトをご覧ください。' },
+      { q: '一般の方も来場できますか？', a: '祭典ごとに異なります。各イベントサイトのお知らせをご確認ください。' },
+      { q: '取材・協賛の問い合わせ先は？', a: 'ページ下部の「お問い合わせ」からご連絡ください。' },
+    ];
+    return {
+      compact, showRail: !compact, drawerOpen: compact && this.state.drawer,
+      mainPadLeft: compact ? '0' : '88px', mainPadTop: compact ? '64px' : '0',
+      openDrawer: () => this.setState({ drawer: true }), closeDrawer: () => this.setState({ drawer: false }),
+      goCommittees: () => this.go('committees'),
+      navItems, newsFilters,
+      // 情報量を絞る：お知らせは最新3件まで（残りは「すべて見る」へ）
+      newsList: (this.state.filter === 'すべて' ? news : news.filter(n => n.cat === this.state.filter)).slice(0, 3),
+      bgLayer: this.bgLayer(), cardDir: stack ? 'column' : 'row',
+      viz: { home: this.vizPanel(0, 'キービジュアル（仮置き）'), news: this.vizPanel(1, 'ビジュアル（仮置き）'), committees: this.vizPanel(2, 'ビジュアル（仮置き）'), archive: this.vizPanel(3, 'ビジュアル（仮置き）'), members: this.vizPanel(4, 'ビジュアル（仮置き）'), history: this.vizPanel(5, 'ビジュアル（仮置き）'), faq: this.vizPanel(7, 'ビジュアル（仮置き）') },
+      footPad: compact ? '48px 16px' : '64px', detailW: stack ? 'min(420px, calc(100vw - 64px))' : '260px',
+      committeeRowH: stack ? 'auto' : '208px', archiveRowH: stack ? 'auto' : '336px', memberRowH: stack ? 'auto' : '296px',
+      committeeRows: this.rows(this.cards('committee', faculties.map(([f, c]) => ({ short: f, name: f + ' 祭典実行委員会', initial: f[0], campus: c + 'キャンパス' })), '196px'), '140px'),
+      archiveRows: this.rows(this.cards('archive', [2025, 2024, 2023, 2022, 2021].map(y => ({ year: y, title: '統一祭' + y })), Math.ceil(Math.min(420, this.state.w - 64) * 9 / 16 + 176) + 'px'), '200px'),
+      memberRows: this.rows(this.cards('member', [
+        { role: '委員長', name: '氏名', dept: '学部・学年' }, { role: '副委員長', name: '氏名', dept: '学部・学年' },
+        { role: '総務', name: '氏名', dept: '学部・学年' }, { role: '会計', name: '氏名', dept: '学部・学年' },
+        { role: '広報', name: '氏名', dept: '学部・学年' }, { role: '企画', name: '氏名', dept: '学部・学年' },
+      ], '264px'), '200px'),
+      history: [
+        { year: '19XX', text: '組織設立（沿革を入力）' }, { year: '20XX', text: '統一祭を初開催' },
+        { year: '20XX', text: '各学部委員会の連携体制を整備' }, { year: '2026', text: '公式ポータルサイト公開' },
+      ],
+      mapLayers: ['会場', 'ブース', 'トイレ・休憩所'],
+      faqs: faqRaw.map((f, i) => { const open = this.state.openFaq === i; return { ...f, open, icon: open ? 'expand_less' : 'expand_more', bg: open ? 'var(--badge)' : 'var(--card)', toggle: () => this.setState({ openFaq: open ? -1 : i }) }; }),
+      sns: [{ name: 'X', icon: 'tag' }, { name: 'Instagram', icon: 'photo_camera' }, { name: 'YouTube', icon: 'smart_display' }, { name: 'LINE', icon: 'chat' }],
+    };
+  }
+}
+</script>
